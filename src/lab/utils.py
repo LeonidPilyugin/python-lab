@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sc
 import pint
+import math
 from uncertainties import ufloat
 from .unitdict import udict
 
@@ -78,7 +79,6 @@ def format_unit(unit, registry, **options):
     res += "\\cdot".join(["\\text{" + udict[n[0]] + ("" if n[1] == 1 else "}^{" + str(n[1])) + "}" for n in denominator])
     
     return res
-    
         
         
 def texify(value, dimension=True):
@@ -86,11 +86,18 @@ def texify(value, dimension=True):
         assert dimension
         return f"{value:~rutex}"
     elif isinstance(value, pint.Quantity):
-        res = str(value.magnitude)
+        v = value.magnitude
+        n = v if not hasattr(v, "n") else v.n
+        e = math.floor(math.log10(n))
+        if e < -1 or e > 3:
+            res = "{:e}".format(v)
+        else:
+            res = str(v)
         
         if "e" in res:
             man, exp = res.split("e")
             exp = exp.replace("+0", "")
+            exp = exp.replace("-0", "-")
             exp = exp.replace("+", "")
             res = man + "\\cdot 10^{" + exp + "}"
             
