@@ -167,6 +167,10 @@ class Plot:
             _k2, _b2 = l2
             
             self.ax.fill_between([xi, xa], [xi * _k1 + _b1, xa * _k1 + _b1], [xi * _k2 + _b2, xa * _k2 + _b2], alpha=alpha, **kwargs)
+
+
+    def legend():
+        self.ax.legend()
         
     
     def clear(self):
