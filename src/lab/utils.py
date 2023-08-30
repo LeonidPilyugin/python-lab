@@ -114,8 +114,14 @@ def texify(value, dimension=True):
         return f"{str(value).replace('.', '{,}')}"
 
 
-def totex(x, **kwargs):
+def totex(x, file=None, **kwargs):
     if hasattr(x, "texify"):
-        print(x.texify(**kwargs))
+        string = x.texify(**kwargs)
+        if file is None:
+            print(string)
+        else:
+            with open(file, "w") as f:
+                f.write(string)
+                f.write("\n")
     else:
         print(texify(x))
