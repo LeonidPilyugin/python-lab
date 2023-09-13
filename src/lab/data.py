@@ -57,7 +57,17 @@ class Data:
                     df[ec].iloc[i] = prev
                 else:
                     prev = df[ec].iloc[i]
-            
+
+            def handle_percent(x):
+                if "%" in x:
+                    x = float(df[k].iloc[handle_percent.counter]) * float(x.strip("%")) / 100
+                handle_percent.counter += 1
+                return x
+
+            handle_percent.counter = 0
+
+            df[ec] = df[ec].apply(handle_percent)
+
             df2[k] = utils.create_measure(df[k].to_numpy(dtype="float") * unit(dimension[k]), df[ec].to_numpy(dtype="float") * unit(dimension[ec]))
         
         
