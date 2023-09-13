@@ -59,7 +59,7 @@ class Data:
                     prev = df[ec].iloc[i]
 
             def handle_percent(x):
-                if "%" in x:
+                if isinstance(x, str) and "%" in x:
                     x = float(df[k].iloc[handle_percent.counter]) * float(x.strip("%")) / 100
                 handle_percent.counter += 1
                 return x
