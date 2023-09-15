@@ -142,8 +142,10 @@ class Plot:
         
     
     def line(self, k, b, **kwargs):
-        k = k.to(self._qy / self._qx).magnitude.n
-        b = b.to(self._qy).magnitude.n
+        if not isinstance(k, float):
+            k = k.to(self._qy / self._qx).magnitude.n
+        if not isinstance(b, float):
+            b = b.to(self._qy).magnitude.n
         xi, xa = self.ax.get_xlim()
         self.ax.axline([xi, xi * k + b], [xa, xa * k + b], **kwargs)
         

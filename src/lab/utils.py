@@ -11,6 +11,12 @@ _std = np.vectorize(lambda x: x.s)
 magnitude = np.vectorize(lambda x: x.magnitude)
 
 
+def meanstd(x):
+    mean = nominal(x.arr).mean().m
+    std = nominal(x.arr).std()
+    return ufloat(mean, std) * x.u
+
+
 def nominal(x):
     if isinstance(x, np.ndarray):
         return _nominal(x) * _units(x)
@@ -79,8 +85,63 @@ def format_unit(unit, registry, **options):
     res += "\\cdot".join(["\\text{" + udict[n[0]] + ("" if n[1] == 1 else "}^{" + str(n[1])) + "}" for n in denominator])
     
     return res
-        
-        
+
+def texify_nominal(val, err=None):
+    if err is None:
+        return str(val).replace('.', '{,}')
+    else:
+        # get order
+        val_order = math.floor(math.log10(abs(val)))
+        err_order = math.floor(math.log10(abs(err)))
+
+        # get first error digit
+        first_err_digit = int(abs(err) / 10 ** err_order)
+
+        val_digits = val_order - err_order + 1
+        err_digits = 1
+
+        if first_err_digit == 1:
+            err_digits += 1
+            val_digits += 1
+
+
+        if abs(err_order) > 2:
+            val /= 10 ** err_order
+            err /= 10 ** err_order
+            val = round(val, val_digits - math.floor(math.log10(abs(val))) - 1)
+            err = round(err, err_digits - math.floor(math.log10(abs(err))) - 1)
+            if val_digits - math.floor(math.log10(abs(val))) - 1 < 1:
+                val = int(val)
+                err = int(err)
+            return f"\\left({str(val).replace('.', '{,}')} \\pm {str(err).replace('.', '{,}')}\\right)\\cdot 10^{{{err_order}}}"
+        else:
+            val = round(val, val_digits - val_order - 1)
+            err = round(err, err_digits - err_order - 1)
+            if val_digits - val_order - 1 < 1:
+                val = int(val)
+                err = int(err)
+            return f"{str(val).replace('.', '{,}')} \\pm {str(err).replace('.', '{,}')}"
+
+
+def texify(value, dimension=True):
+    if isinstance(value, pint.Unit):
+        assert dimension
+        return f"{value:~rutex}"
+    elif isinstance(value, pint.Quantity):
+        v = value.magnitude
+        n = v if not hasattr(v, "n") else v.n
+        s = None if not hasattr(v, "s") else v.s
+
+        res = texify_nominal(n, s)
+
+        if dimension:
+            res += "\\;" + f"{value.units:~rutex}"
+
+        return res
+    else:
+        return f"{str(value).replace('.', '{,}')}"
+
+"""
 def texify(value, dimension=True):
     if isinstance(value, pint.Unit):
         assert dimension
@@ -93,18 +154,20 @@ def texify(value, dimension=True):
             res = "{:e}".format(v)
         else:
             res = str(v)
-        
+
         if "e" in res:
             man, exp = res.split("e")
             exp = exp.replace("+0", "")
             exp = exp.replace("-0", "-")
             exp = exp.replace("+", "")
             res = man + "\\cdot 10^{" + exp + "}"
-            
+
         res = res.replace("(", "\\left(")
         res = res.replace(")", "\\right)")
         res = res.replace("+/-", "\\pm")
         res = res.replace(".", "{,}")
+
+        res = texify_nominal()
             
         if dimension:
             res += "\\;" + f"{value.units:~rutex}"
@@ -112,6 +175,7 @@ def texify(value, dimension=True):
         return res
     else:
         return f"{str(value).replace('.', '{,}')}"
+"""
 
 
 def totex(x, file=None, **kwargs):
