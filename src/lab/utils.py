@@ -95,7 +95,12 @@ def texify_nominal(val, err=None):
         err_order = math.floor(math.log10(abs(err)))
 
         # get first error digit
-        first_err_digit = int(abs(err) / 10 ** err_order)
+        first_err_digit = int(str(int(round((abs(err) / 10 ** err_order), 0)))[0])
+
+        _first_err_digit = int((abs(err) / 10 ** err_order))
+
+        if len(str(int(round((abs(err) / 10 ** err_order), 0)))) > 1:
+            err_order += 1
 
         val_digits = val_order - err_order + 1
         err_digits = 1
@@ -104,22 +109,47 @@ def texify_nominal(val, err=None):
             err_digits += 1
             val_digits += 1
 
-
         if abs(err_order) > 2:
             val /= 10 ** err_order
             err /= 10 ** err_order
             val = round(val, val_digits - math.floor(math.log10(abs(val))) - 1)
             err = round(err, err_digits - math.floor(math.log10(abs(err))) - 1)
-            if val_digits - math.floor(math.log10(abs(val))) - 1 < 1:
-                val = int(val)
+            if _first_err_digit != 1:
+                err = round(err, 0)
+            try:
+                if val_digits - math.floor(math.log10(abs(val))) - 1 < 1:
+                    val = int(val)
+                    err = int(err)
+            except Exception:
+                val = 0
                 err = int(err)
             return f"\\left({str(val).replace('.', '{,}')} \\pm {str(err).replace('.', '{,}')}\\right)\\cdot 10^{{{err_order}}}"
         else:
             val = round(val, val_digits - val_order - 1)
             err = round(err, err_digits - err_order - 1)
+
             if val_digits - val_order - 1 < 1:
                 val = int(val)
                 err = int(err)
+
+            if err_digits == 2:
+                if not any([str(i) in str(err).replace("1", "", 1) for i in range(1, 10)]):
+                    if err_order < 0:
+                        err = str(err) + "0"
+                        val = str(val)
+                        while len(val.split(".")[-1]) < abs(err_order) + 1:
+                            val += "0"
+                    if err_order == 0:
+                        err = str(err).split(".")[0] + "{,}0"
+                        val = str(val)
+                        if not "." in val:
+                            val = val + "{,}0"
+
+            if err_order < 0:
+                val = str(val)
+                while len(val.split(".")[-1]) < abs(err_order):
+                            val += "0"
+
             return f"{str(val).replace('.', '{,}')} \\pm {str(err).replace('.', '{,}')}"
 
 
