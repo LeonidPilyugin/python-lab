@@ -45,8 +45,9 @@ class Data:
         for k, ec in columns.items():
             if ec is None:
                 res = []
+
                 for i in range(len(df[k])):
-                    res.append(df[k].iloc[i] * unit(dimension[k]))
+                    res.append(float(df[k].iloc[i]) * unit(dimension[k]))
                 
                 df2[k] = np.array(res, dtype=object)
                 continue
@@ -116,7 +117,7 @@ class Data:
     
     
     def __setitem__(self, key, value):
-        self.df[key] = value.arr
+        self.df[key] = arr.Array(value).arr
     
         
     def texify(self, primary=False, columns=None):

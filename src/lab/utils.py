@@ -171,43 +171,6 @@ def texify(value, dimension=True):
     else:
         return f"{str(value).replace('.', '{,}')}"
 
-"""
-def texify(value, dimension=True):
-    if isinstance(value, pint.Unit):
-        assert dimension
-        return f"{value:~rutex}"
-    elif isinstance(value, pint.Quantity):
-        v = value.magnitude
-        n = v if not hasattr(v, "n") else v.n
-        e = math.floor(math.log10(n))
-        if e < -1 or e > 3:
-            res = "{:e}".format(v)
-        else:
-            res = str(v)
-
-        if "e" in res:
-            man, exp = res.split("e")
-            exp = exp.replace("+0", "")
-            exp = exp.replace("-0", "-")
-            exp = exp.replace("+", "")
-            res = man + "\\cdot 10^{" + exp + "}"
-
-        res = res.replace("(", "\\left(")
-        res = res.replace(")", "\\right)")
-        res = res.replace("+/-", "\\pm")
-        res = res.replace(".", "{,}")
-
-        res = texify_nominal()
-            
-        if dimension:
-            res += "\\;" + f"{value.units:~rutex}"
-            
-        return res
-    else:
-        return f"{str(value).replace('.', '{,}')}"
-"""
-
-
 def totex(x, file=None, **kwargs):
     if hasattr(x, "texify"):
         string = x.texify(**kwargs)

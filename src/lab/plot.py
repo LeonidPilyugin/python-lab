@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import pint
 from . import utils
+from . import arr
 from itertools import combinations
 from .unit import unit
 from .unitdict import udict, mpludict
@@ -112,6 +113,9 @@ class Plot:
     
     
     def plot(self, x, y, **kwargs):
+        x = arr.Array(x)
+        y = arr.Array(y)
+
         if self._qx is None:
             self._qx = x.arr[0].units
             self._update_xlabel()

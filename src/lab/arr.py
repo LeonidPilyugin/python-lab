@@ -54,6 +54,10 @@ class Array:
         for a in self.arr:
             a.ito(unit)
         return self
+
+    def set_err(self, func):
+        self.arr = utils.create_measure(self.arr, func(self.arr))
+        return self
     
     
     @property
