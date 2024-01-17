@@ -6,6 +6,40 @@ from .unitdict import udict
 from . import utils
 from . import arr
 
+def _convert(array, units):
+    res = []
+
+    for a in array:
+        res.append(a.to(units))
+
+    return np.array(res, dtype=object)
+
+def _normalize(array):
+    units = array[0].units
+    res = []
+
+    for a in array:
+        res.append(a.to(units))
+
+    return np.array(res, dtype=object)
+
+
+def _create_measure(n, s):
+    assert len(s) == len(n)
+
+    res = []
+    n = _normalize(n)
+    s = _convert(s, n[0].units)
+
+    for i in range(len(s)):
+        res.append(ufloat(n[i].magnitude, s[i].magnitude) * n[0].units)
+
+    return np.array(res, dtype=object)
+
+_vnominal = np.vectorize(lambda x: x.n)
+_vunits = np.vectorize(lambda x: x.units)
+_vstd = np.vectorize(lambda x: x.s)
+
 class Data:
     def __init__(self, path, **kwargs):
         self.load(path, **kwargs)
@@ -69,7 +103,7 @@ class Data:
 
             df[ec] = df[ec].apply(handle_percent)
 
-            df2[k] = utils.create_measure(df[k].to_numpy(dtype="float") * unit(dimension[k]), df[ec].to_numpy(dtype="float") * unit(dimension[ec]))
+            df2[k] = _create_measure(df[k].to_numpy(dtype="float") * unit(dimension[k]), df[ec].to_numpy(dtype="float") * unit(dimension[ec]))
         
         
         self.primary_measurements = df2.copy()
@@ -86,16 +120,16 @@ class Data:
                     l.append(f.iloc[0].values.tolist())
                     continue
                 
-                arr = [d[0]]
+                _arr = [d[0]]
                 for c in f.columns:
                     if hasattr(f[c].iloc[0], "n"):
-                        temp = utils.normalize(f[c].to_numpy(dtype=object))
+                        temp = _normalize(f[c].to_numpy(dtype=object))
                         units = temp[0].units
-                        err = ufloat(0, max(utils._std(temp))) * units
-                        temp = utils._nominal(temp)
+                        err = ufloat(0, max(_vstd(temp))) * units
+                        temp = _vnominal(temp)
                         mean = ufloat(temp.mean(), 0) * units
                         std = ufloat(0, temp.std() / np.sqrt(len(temp))) * units
-                        arr.append(mean + std + err)
+                        _arr.append(mean + std + err)
                     else:
                         temp = f[c].to_numpy(dtype=object)
                         mean = temp.mean()
@@ -105,7 +139,7 @@ class Data:
                         
                         f[c] = mean
                     
-                l.append(arr)
+                l.append(_arr)
                     
             self.df = pd.DataFrame(l, dtype=object, columns=columns)
         else:

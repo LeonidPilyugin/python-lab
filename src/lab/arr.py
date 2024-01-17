@@ -1,53 +1,112 @@
 from typing import Any
+from collections.abc import Iterable
 import numpy as np
+from uncertainties import ufloat
 import pint
-from . import utils
+from . import utils, unit as un
+
 
 class Array:
     _f = np.vectorize(lambda x, u: x.ito(u), otypes=[object, object])
+
+    @staticmethod
+    def toac(val):
+        """Convert val to Array-compatible type
+        """
+        old_val = val
+
+        if isinstance(val, Array):
+            val = val.arr
+
+        if not isinstance(val, Iterable) and not isinstance(val, pint.Quantity):
+            val = [val]
+
+        # convert val to ndarray if possible
+        if isinstance(val, list) or isinstance(val, tuple):
+            val = np.asarray(val, dtype=object)
+        if isinstance(val, pint.Quantity):
+            if hasattr(val.m, "copy"):
+                vu = val.u
+                val = val.m.copy().astype(object)
+                for i in range(len(val)):
+                    val[i] *= vu
+            else:
+                val = np.array([val], dtype=object)
+        if not isinstance(val, np.ndarray):
+            raise ValueError(f"Unknown value type {type(old_val)}")
+
+        val = val.astype(object)
+        assert(isinstance(val, np.ndarray))
+
+        # convert units to quantities
+        first_val = val[0]
+        if not isinstance(first_val, pint.Quantity):
+            for i in range(len(val)):
+                val[i] *= un.unit("dimensionless")
+            first_val = val[0]
+
+        assert(all([isinstance(v, pint.Quantity) for v in val]))
+
+        # convet all values to first element units
+        unit = first_val.u
+        for i in range(1, len(val)):
+            val[i] = val[i].to(unit)
+
+        # add uncertainty
+        if not (hasattr(first_val.m, "s") and hasattr(first_val.m, "n")):
+            for i in range(len(val)):
+                val[i] = ufloat(val[i].m, 0) * unit
+
+        assert(all([hasattr(v.m, "s") and hasattr(v.m, "n") for v in val]))
+
+        return val
     
     def __init__(self, arr):
-        if isinstance(arr, np.ndarray):
-            self.arr = utils.normalize(arr)
-        elif isinstance(arr, Array):
-            self.arr = arr.arr
-        else:
-            self.arr = np.asarray([arr], dtype=object)
+        self.arr = Array.toac(arr)
         
     
     def __add__(self, other):
-        return Array(self.arr + Array(other).arr)
-    
-    
-    __radd__ = __add__
+        return Array(self.arr + Array.toac(other))
     
     
     def __sub__(self, other):
-        return Array(self.arr - Array(other).arr)
+        return Array(self.arr - Array.toac(other))
     
     
-    __rsub__ = __sub__
+    def __rsub__(self, other):
+        return Array(Array.toac(other) - self.arr)
         
         
     def __mul__(self, other):
-        return Array(self.arr * Array(other).arr)
-    
-    
-    __rmul__ = __mul__
+        if isinstance(other, pint.Quantity):
+            res = self.arr.copy()
+            for i in range(len(res)):
+                res[i] = res[i] * other
+            return Array(res)
+
+        return Array(self.arr * Array.toac(other))
     
     
     def __truediv__(self, other):
-        return Array(self.arr / Array(other).arr)
-    
-    
-    __rtruediv__ = __truediv__
+        if isinstance(other, pint.Quantity):
+            res = self.arr.copy()
+            for i in range(len(res)):
+                res[i] = res[i] / other
+            return Array(res)
+
+        return Array(self.arr / Array.toac(other))
     
     
     def __pow__(self, other):
-        return Array(self.arr ** Array(other).arr)
-    
-    
-    __rpow__ = __pow__
+        if isinstance(other, Array) and other.size == 1:
+            other = other[0].m.n
+        if isinstance(other, int) or isinstance(other, float):
+            res = self.arr.copy()
+            for i in range(len(res)):
+                res[i] = res[i] ** other
+            return Array(res)
+        else:
+            raise ValueError(f"Argument must be int or float, not {type(other)}")
     
     
     def ito(self, unit):
@@ -55,23 +114,45 @@ class Array:
             a.ito(unit)
         return self
 
-    def set_err(self, func):
-        self.arr = utils.create_measure(self.arr, func(self.arr))
-        return self
+    def apply(self, func):
+        for i in range(len(self.arr)):
+            self.arr[i] = func(self.arr[i])
     
+
+    @property
+    def dimensionless(self):
+        return self.arr[0].u == un.unit.dimensionless
+
     
     @property
     def u(self):
-        return self.arr[0].units
+        """Return units"""
+        return self.arr[0].u
     
     
     @property
     def m(self):
-        return self / (1 * self.u)
+        """Return numpy array of magnitudes"""
+        return np.array([v.m for v in self.arr], dtype=object)
+
+
+    @property
+    def s(self):
+        """Return numpy array of stds"""
+        return np.array([v.m.s for v in self.arr])
+
+
+    @property
+    def n(self):
+        """Return numpy array of nominals"""
+        return np.array([v.m.n for v in self.arr])
     
     
     def __getitem__(self, key):
-        return self.arr.__getitem__(key)
+        res = self.arr.__getitem__(key)
+        if isinstance(key, slice):
+            res = Array(res)
+        return res
     
     
     def __setitem__(self, key, value):
@@ -84,7 +165,16 @@ class Array:
     
     def __repr__(self):
         return self.arr.__repr__()
+
+
+    def copy(self):
+        return Array(self.arr.copy())
     
     
     def __getattr__(self, attr):
         return self.arr.__getattribute__(attr)
+
+
+
+def concat(*args):
+    return Array(list(args))

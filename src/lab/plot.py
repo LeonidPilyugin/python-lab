@@ -117,32 +117,18 @@ class Plot:
         y = arr.Array(y)
 
         if self._qx is None:
-            self._qx = x.arr[0].units
+            self._qx = x.u
             self._update_xlabel()
         if self._qy is None:
-            self._qy = y.arr[0].units
+            self._qy = y.u
             self._update_ylabel()
 
         # convert units
-        x = utils.convert(x.arr, self._qx)
-        y = utils.convert(y.arr, self._qy)
-        
-        # split x and y on nominal and error
-        if hasattr(x[0], "s"):
-            xerr = utils.magnitude(utils.std(x))
-            x = utils.magnitude(utils.nominal(x))
-        else:
-            xerr = None
-            x = utils.magnitude(x)
-        if hasattr(y[0], "s"):
-            yerr = utils.magnitude(utils.std(y))
-            y = utils.magnitude(utils.nominal(y))
-        else:
-            yerr = None
-            y = utils.magnitude(y)
+        x.ito(self._qx)
+        y.ito(self._qy)
         
         # plot
-        self.ax.errorbar(x, y, xerr=xerr, yerr=yerr, **kwargs)
+        self.ax.errorbar(x.n, y.n, xerr=x.s, yerr=y.s, **kwargs)
         
     
     def line(self, k, b, **kwargs):
@@ -175,7 +161,7 @@ class Plot:
             self.ax.fill_between([xi, xa], [xi * _k1 + _b1, xa * _k1 + _b1], [xi * _k2 + _b2, xa * _k2 + _b2], alpha=alpha, **kwargs)
 
 
-    def legend():
+    def legend(self):
         self.ax.legend()
         
     

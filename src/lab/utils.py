@@ -4,63 +4,10 @@ import pint
 import math
 from uncertainties import ufloat
 from .unitdict import udict
+from .unit import unit
 
-_nominal = np.vectorize(lambda x: x.n)
-_units = np.vectorize(lambda x: x.units)
-_std = np.vectorize(lambda x: x.s)
-magnitude = np.vectorize(lambda x: x.magnitude)
-
-
-def meanstd(x):
-    mean = nominal(x.arr).mean().m
-    std = nominal(x.arr).std()
-    return ufloat(mean, std) * x.u
-
-
-def nominal(x):
-    if isinstance(x, np.ndarray):
-        return _nominal(x) * _units(x)
-    else:
-        return x.n * x.units
-    
-
-def std(x):
-    if isinstance(x, np.ndarray):
-        return _std(x) * _units(x)
-    else:
-        return x.s * x.units
-    
-
-def convert(array, units):
-    res = []
-    
-    for a in array:
-        res.append(a.to(units))
-        
-    return np.array(res, dtype=object)
-
-
-def normalize(array):
-    units = array[0].units
-    res = []
-    
-    for a in array:
-        res.append(a.to(units))
-    
-    return np.array(res, dtype=object)
-
-
-def create_measure(n, s):
-    assert len(s) == len(n)
-    
-    res = []
-    n = normalize(n)
-    s = convert(s, n[0].units)
-    
-    for i in range(len(s)):
-        res.append(ufloat(n[i].magnitude, s[i].magnitude) * n[0].units)
-        
-    return np.array(res, dtype=object)
+def uf(mean, std, units):
+    return ufloat(mean, std) * unit("units")
 
 
 def student(n, confidence=0.95):
@@ -87,7 +34,7 @@ def format_unit(unit, registry, **options):
     return res
 
 def texify_nominal(val, err=None):
-    if err is None:
+    if err is None or err == 0.0:
         return str(val).replace('.', '{,}')
     else:
         # get order

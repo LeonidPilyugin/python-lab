@@ -2,40 +2,30 @@ import numpy as np
 from typing import Tuple
 import pint
 from uncertainties import ufloat
+import math
 from . import utils
 from . import arr
 from . import mmath
 
 # line by LSQ method
 def lsq(x, y, w = None, sl = slice(None, None)) -> Tuple[pint.Quantity, pint.Quantity]:
-    if isinstance(x, arr.Array):
-        x = x.arr
-    if isinstance(y, arr.Array):
-        y = y.arr
-    if isinstance(w, arr.Array):
-        w = w.arr
+    if not isinstance(x, arr.Array):
+        x = arr.Array(x)
+    if not isinstance(y, arr.Array):
+        y = arr.Array(y)
         
     x = x[sl]
     y = y[sl]
         
     # check if arguments are correct
-    assert len(x) == len(y)
+    assert x.size == y.size
     if w is None:
-        w = np.ones(len(x))
-    assert len(w) == len(x)
-    
+        w = arr.Array(np.ones(x.size))
+    assert w.size == x.size
+
     # sum of weights
-    W = w.sum()
+    W = w.n.sum()
     assert W != 0
-    
-    if hasattr(x[0], "units"):
-        x = utils.normalize(x)
-    if hasattr(y[0], "units"):
-        y = utils.normalize(y)
-    if hasattr(x[0], "n"):
-        x = utils.nominal(x)
-    if hasattr(y[0], "n"):
-        y = utils.nominal(y)
 
     # hepful values
     x_mean = (x * w).sum() / W
@@ -50,28 +40,32 @@ def lsq(x, y, w = None, sl = slice(None, None)) -> Tuple[pint.Quantity, pint.Qua
     # compute parameters
     k = Dxy / Dxx
     b = y_mean - k * x_mean
-    ksigma = mmath.sqrt(arr.Array((Dyy / Dxx - k ** 2) / (len(x) - 2))).arr[0]
-    bsigma = ksigma * mmath.sqrt(arr.Array(x2_mean)).arr[0]
+    ksigma = mmath.sqrt((Dyy / Dxx - k ** 2) / (x.size - 2))[0]
+    bsigma = ksigma * mmath.sqrt(x2_mean)[0]
     
     # return result
-    return ufloat(k.magnitude, ksigma.magnitude) * k.units, ufloat(b.magnitude, bsigma.magnitude) * b.units
+    return ufloat(k.n, ksigma.n) * k.u, ufloat(b.n, bsigma.n) * b.u
 
 
 # line by chi^2 method
 def chi2(x, y, sl = slice(None, None)) -> Tuple[pint.Quantity, pint.Quantity]:
-    if isinstance(x, arr.Array):
-        x = x.arr
-    if isinstance(y, arr.Array):
-        y = y.arr
-    
+    if not isinstance(x, arr.Array):
+        x = arr.Array(x)
+    if not isinstance(y, arr.Array):
+        y = arr.Array(y)
+
     x = x[sl]
     y = y[sl]
     
     # check if arguments are correct
-    assert len(x) == len(y)
+    assert x.size == y.size
     
     # compute weights
-    w = 1 / utils.normalize(utils.std(y)) ** 2
+    w = arr.Array(1 / y.s ** 2)
+    for item in w:
+        if math.isinf(item.s) or math.isnan(item.s) or math.isinf(item.n) or math.isnan(item.n):
+            w = None
+            break
     
     # return result
     return lsq(x, y, w)
