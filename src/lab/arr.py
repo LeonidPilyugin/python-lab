@@ -149,9 +149,18 @@ class Array:
     
     
     def __getitem__(self, key):
-        res = self.arr.__getitem__(key)
-        if isinstance(key, slice):
-            res = Array(res)
+        if isinstance(key, int):
+            return self.arr.__getitem__(key)
+
+        if not isinstance(key, tuple):
+            key = key,
+
+        res = None
+        for k in key:
+            val = self.arr.__getitem__(k)
+            if isinstance(k, int):
+                val = val,
+            res = Array(val) if res is None else Array.concat(*res, *val)
         return res
     
     
@@ -174,7 +183,6 @@ class Array:
     def __getattr__(self, attr):
         return self.arr.__getattribute__(attr)
 
-
-
-def concat(*args):
-    return Array(list(args))
+    @staticmethod
+    def concat(*args):
+        return Array(list(args))

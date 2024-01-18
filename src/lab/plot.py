@@ -24,6 +24,7 @@ def format_unit(unit, registry, **options):
             "7": "\u2077",
             "8": "\u2078",
             "9": "\u2079",
+            ",": "\u02bc"
         }
 
         num = []
