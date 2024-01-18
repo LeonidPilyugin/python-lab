@@ -7,7 +7,7 @@ from .unitdict import udict
 from .unit import unit
 
 def uf(mean, std, units):
-    return ufloat(mean, std) * unit("units")
+    return ufloat(mean, std) * unit(units)
 
 
 def student(n, confidence=0.95):

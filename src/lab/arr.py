@@ -7,8 +7,6 @@ from . import utils, unit as un
 
 
 class Array:
-    _f = np.vectorize(lambda x, u: x.ito(u), otypes=[object, object])
-
     @staticmethod
     def toac(val):
         """Convert val to Array-compatible type
